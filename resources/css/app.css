@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   Tokens — voir docs/DESIGN.md pour la justification de chaque décision.
+   ========================================================================== */
+
+:root {
+    /* Couleurs société (règle 2 — une couleur = une société). Source de vérité :
+       `societes.couleur` en base ; ces variables ne font que NOMMER les mêmes
+       valeurs pour qu'elles soient citables/documentées à un seul endroit. */
+    --societe-randa: #c8102e;
+    --societe-smt: #1d4ed8;
+    --societe-tf: #047857;
+
+    /* Variantes THÈME SOMBRE des couleurs société — même teinte, luminosité
+       relevée pour atteindre un contraste ≥ 4,5:1 sur fond gray-900/950 (mesuré
+       formellement, voir docs/DESIGN.md §1.2). Jamais de changement de teinte. */
+    --societe-randa-sombre: #ef3a58;
+    --societe-smt-sombre: #547be8;
+    --societe-tf-sombre: #05966c;
+
+    /* Échelle sémantique de statut/sévérité — VOLONTAIREMENT distincte des
+       couleurs société (décision §1.2 : le rouge Randa ne doit jamais pouvoir
+       être confondu avec une alerte critique). */
+    --statut-critique: #7c3aed; /* violet-600 — opposé au rouge Randa sur le cercle chromatique */
+    --statut-critique-sombre: #9864f1;
+    --statut-attention: #d97706; /* amber-600 */
+    --statut-attention-sombre: #fbbf24;
+
+    /* vert-600 (et non émeraude) : émeraude (#059669, teinte 161°) est quasiment
+       la MÊME teinte que le vert Tunisie Farine (#047857, teinte 163°) — même
+       risque de confusion que rouge Randa/critique. Vert-600 (teinte 142°) reste
+       lisible comme "vert/ok" tout en s'écartant nettement de la couleur TF.
+       Déjà ≥ 4,5:1 sur gray-900/950 sans ajustement de luminosité. */
+    --statut-ok: #16a34a; /* green-600 */
+    --statut-neutre: #6b7280; /* gray-500 */
+}
+
+/* ==========================================================================
+   Base — accessibilité transversale (plancher qualité, exigence 8).
+   ========================================================================== */
+
+@layer base {
+    /* Anneau de focus clavier UNIQUE et cohérent, posé une fois pour tout
+       élément interactif plutôt que composant par composant (sinon on en
+       oublie, comme c'était le cas). Seulement au clavier (:focus-visible) —
+       ne perturbe pas les composants qui gèrent déjà leur propre anneau au clic. */
+    a:focus-visible,
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible,
+    [tabindex]:focus-visible {
+        outline: 2px solid #6366f1; /* indigo-500 */
+        outline-offset: 2px;
+        border-radius: 2px;
+    }
+    .dark a:focus-visible,
+    .dark button:focus-visible,
+    .dark input:focus-visible,
+    .dark select:focus-visible,
+    .dark textarea:focus-visible,
+    .dark [tabindex]:focus-visible {
+        outline-color: #818cf8; /* indigo-400 */
+    }
+
+    /* Champs de formulaire en thème sombre (non couverts par les variantes `dark:`). */
+    .dark input:not([type='checkbox']):not([type='radio']):not([type='range']),
+    .dark select,
+    .dark textarea {
+        background-color: theme('colors.gray.800');
+        border-color: theme('colors.gray.700');
+        color: theme('colors.gray.100');
+    }
+
+    .dark input::placeholder,
+    .dark textarea::placeholder {
+        color: theme('colors.gray.500');
+    }
+
+    .dark .recharts-text {
+        fill: theme('colors.gray.400');
+    }
+
+    .dark .recharts-cartesian-grid line {
+        stroke: theme('colors.gray.700');
+    }
+
+    .dark .recharts-cartesian-axis-line,
+    .dark .recharts-cartesian-axis-tick-line {
+        stroke: theme('colors.gray.700');
+    }
+
+    .dark .recharts-tooltip-wrapper .recharts-default-tooltip {
+        background-color: theme('colors.gray.800') !important;
+        border-color: theme('colors.gray.700') !important;
+        color: theme('colors.gray.100');
+    }
+}
+
+/* `prefers-reduced-motion` — plancher qualité, manquait entièrement. Neutralise
+   toute transition/animation non essentielle pour qui a activé la préférence
+   système. La seule animation fonctionnelle de l'app (ouverture des menus,
+   Headless UI) reste quasi instantanée plutôt que brutalement coupée. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* ==========================================================================
+   Composants — hiérarchie de surface à 3 niveaux (remplace le « tout-carte »
+   uniforme). Voir docs/DESIGN.md §3.1.
+   ========================================================================== */
+
+@layer components {
+    /* Niveau 1 — carte KPI : peu de contenu, à retenir d'un coup d'œil. */
+    .card-kpi {
+        @apply rounded-lg bg-white p-4 shadow-sm dark:bg-gray-900;
+    }
+
+    /* Niveau 2 — panneau de données denses (tableaux, graphiques) : bords nets,
+       pas d'ombre décorative — la densité de contenu porte sa propre légitimité
+       visuelle, elle n'a pas besoin d'un habillage « carte ». */
+    .panel {
+        @apply rounded-md border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900;
+    }
+
+    /* Niveau 3 — bannière d'information : bordure gauche colorée, jamais
+       d'ombre, pour qu'on comprenne immédiatement « ceci est un message », pas
+       une donnée. Trois variantes sémantiques (distinctes des couleurs société). */
+    .banner {
+        @apply rounded-r-md border-l-4 px-4 py-3 text-sm;
+    }
+    .banner-info {
+        @apply banner border-blue-400 bg-blue-50 text-blue-800 dark:border-blue-500 dark:bg-blue-950 dark:text-blue-200;
+    }
+    .banner-attention {
+        @apply banner border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-500 dark:bg-amber-950 dark:text-amber-200;
+    }
+    .banner-critique {
+        @apply banner border-violet-500 bg-violet-50 text-violet-800 dark:border-violet-400 dark:bg-violet-950 dark:text-violet-200;
+    }
+    .banner-succes {
+        @apply banner border-green-500 bg-green-50 text-green-800 dark:border-green-500 dark:bg-green-950 dark:text-green-200;
+    }
+}
