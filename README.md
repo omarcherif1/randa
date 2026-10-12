@@ -10,15 +10,140 @@ vérifiables** (priorité absolue sur l'esthétique).
 - Architecture et périmètre : [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - Constats sur les données réelles + points à clarifier : [`docs/DATA_NOTES.md`](docs/DATA_NOTES.md)
 
-## Démarrage
+## Installation sur un nouveau PC (Windows)
 
-```bash
-composer install && npm install
-cp .env.example .env && php artisan key:generate     # puis renseigner DB_* (MySQL "randa2")
-php artisan migrate:fresh --seed                     # schéma + 32 familles + 21 catégories + seuils
-npm run build   # ou : npm run dev
-php artisan serve
+### 1. Logiciels à installer
+
+| Outil | Version | Rôle |
+|---|---|---|
+| [XAMPP](https://www.apachefriends.org/) | PHP **8.2+**, MariaDB/MySQL | PHP + base de données |
+| [Composer](https://getcomposer.org/) | 2.x | dépendances PHP |
+| [Node.js](https://nodejs.org/) | 20+ (testé en 24) | front React / Vite |
+| [Python](https://www.python.org/) | 3.11+ (testé en 3.14) | service de prévision ML (facultatif) |
+| [Git](https://git-scm.com/) | — | récupérer le code |
+
+Dans `C:\xampp\php\php.ini`, vérifier que ces extensions sont actives (pas de `;` devant) :
+`extension=zip`, `extension=gd`, `extension=mbstring`, `extension=pdo_mysql`, `extension=fileinfo`.
+
+### 2. Récupérer le code et les dépendances
+
+```powershell
+cd C:\xampp\htdocs
+git clone <url-du-depot> randa2
+cd randa2
+
+composer install
+npm install
 ```
+
+### 3. Configuration (`.env`)
+
+```powershell
+copy .env.example .env
+php artisan key:generate
+```
+
+Puis, dans `.env`, remplacer le bloc base de données par :
+
+```ini
+APP_NAME="Randa"
+APP_URL=http://localhost:8000
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=randa2
+DB_USERNAME=root
+DB_PASSWORD=
+
+ML_FORECAST_URL=http://127.0.0.1:8001
+ML_FORECAST_TIMEOUT=30
+```
+
+### 4. Base de données
+
+Démarrer MySQL (panneau XAMPP → **Start** sur MySQL, ou en ligne de commande) :
+
+```powershell
+C:\xampp\mysql\bin\mysqld.exe --defaults-file=C:\xampp\mysql\bin\my.ini --standalone
+```
+
+Dans un autre terminal, créer la base puis le schéma et les données de référence :
+
+```powershell
+C:\xampp\mysql\bin\mysql.exe -u root -e "CREATE DATABASE IF NOT EXISTS randa2 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+php artisan migrate:fresh --seed     # schéma + 32 familles + 21 catégories + seuils + compte admin
+```
+
+### 5. Importer les données
+
+Les fichiers source (dossier `eya/`) ne sont pas dans Git : les copier à la main dans le projet, puis :
+
+```powershell
+php artisan randa:import "eya\F1790079066766_OMSTAGE.csv"          # fichier unifié (commandes)
+php artisan randa:import "stock.csv" --type=stock                 # facultatif : fichier stock au format CSV « ; »
+php artisan randa:forecast:run                                      # calcul des prévisions
+```
+
+L'import est aussi possible depuis l'application : **Administration → Import**.
+Les zips `stock2025.zip` / `stock2026.zip` contiennent des `.xlsx` : les enregistrer en CSV (séparateur « ; ») avant l'import stock.
+
+> Alternative : restaurer une sauvegarde faite sur l'ancien PC (copier son dossier
+> `storage\app\backups\<date>` au même endroit) : `php artisan randa:restore --force`.
+
+### 6. Service de prévision ML (facultatif, page Prévisions)
+
+Une seule fois :
+
+```powershell
+cd ml-service
+python -m venv venv
+venv\Scripts\pip install -r requirements.txt
+cd ..
+```
+
+### 7. Lancer le projet (à chaque fois)
+
+Quatre terminaux, tous dans `C:\xampp\htdocs\randa2` :
+
+```powershell
+# 1 — base de données (sauf si déjà démarrée depuis le panneau XAMPP)
+C:\xampp\mysql\bin\mysqld.exe --defaults-file=C:\xampp\mysql\bin\my.ini --standalone
+
+# 2 — serveur Laravel
+php artisan serve
+
+# 3 — front (rechargement à chaud)
+npm run dev
+
+# 4 — service ML (facultatif)
+cd ml-service
+venv\Scripts\python -m uvicorn app.main:app --port 8001
+```
+
+Raccourci : `composer run dev` lance d'un coup Laravel + file d'attente + logs + Vite
+(la base et le service ML restent à lancer à part).
+
+Ouvrir **http://localhost:8000**. Compte de démarrage : `admin@randa.local` /
+`Admin-Provisoire-2026` — changement de mot de passe forcé à la 1re connexion.
+
+Sans `npm run dev`, compiler une fois le front : `npm run build`.
+
+### 8. Vérifier l'installation
+
+```powershell
+php artisan test        # toute la suite doit être verte
+```
+
+### Problèmes fréquents
+
+| Symptôme | Solution |
+|---|---|
+| `SQLSTATE[HY000] [2002] … refused` | MySQL n'est pas démarré (étape 4). |
+| `Vite manifest not found` | lancer `npm run dev` ou `npm run build`. |
+| Page blanche / anciennes valeurs après une modif de `.env` | `php artisan optimize:clear` |
+| Prévisions ML « service indisponible » | lancer le service ML (terminal 4). |
+| Accents remplacés par « � » dans les libellés | ajouter le mot dans `config/lexique_accents.php`, puis réimporter. |
 
 ## Vérifier les règles métier sur un fichier source (analyse à blanc, sans écriture)
 
@@ -28,7 +153,7 @@ php artisan randa:analyze-source "F1787140089784_OMSTAGE.csv" --weights # + tabl
 php artisan randa:import "F1787140089784_OMSTAGE.csv"                    # import persistant (dédoublonnage par remplacement)
 php artisan randa:user:create "x@randa.local" "Nom" --societe=RAN --page=dashboard   # créer un compte
 php artisan randa:forecast:run                                          # recalcule les prévisions (snapshots)
-php artisan test          # 241 tests — métier + import + droits + dashboard + Livraisons/Stock/Export/Prévisions + cache + admin + notifications + polish + non-fuite export + scoping société + sauvegarde/restauration + risque dédoublonnage
+php artisan test          # 270 tests — métier + import + droits + dashboard + Livraisons/Stock/Export/Prévisions + cache + admin + notifications + polish + non-fuite export + scoping société + sauvegarde/restauration + risque dédoublonnage
 
 php artisan randa:backup                 # sauvegarde manuelle (auto tous les jours à 02:00)
 php artisan randa:restore [dossier]      # restauration (dernier dossier par défaut ; --force)

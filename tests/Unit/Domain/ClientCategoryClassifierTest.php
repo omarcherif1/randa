@@ -69,6 +69,16 @@ class ClientCategoryClassifierTest extends TestCase
         $this->assertFalse($r->isDefined());
     }
 
+    public function test_la_famille_client_du_fichier_prime_sur_tout(): void
+    {
+        $r = $this->classifier(['9K' => '110'])
+            ->classify('9K', 'BOULANGERIE X', livreALEtranger: true, categorieFichier: '105');
+
+        $this->assertSame('105', $r->categoryCode);
+        $this->assertSame(ClientCategoryResolution::SOURCE_REFERENCE, $r->source);
+        $this->assertSame(ClientCategoryResolution::DETAIL_FICHIER, $r->detail);
+    }
+
     public function test_la_source_fiable_prime_sur_le_mot_cle(): void
     {
         $r = $this->classifier(['9K' => '110'])->classify('9K', 'SUPERMARCHE X');

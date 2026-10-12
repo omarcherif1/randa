@@ -4,7 +4,7 @@ import { useState } from 'react';
  * Enveloppe d'un graphique avec, en dessous, un tableau de données alternatif
  * (exigence d'accessibilité 7 / 4.2 : chaque graphique a une alternative tableau).
  */
-export default function ChartCard({ title, subtitle, children, table, className = '' }) {
+export default function ChartCard({ title, subtitle, children, table, className = '', hauteur = 'h-64' }) {
     const [showTable, setShowTable] = useState(false);
 
     return (
@@ -29,7 +29,7 @@ export default function ChartCard({ title, subtitle, children, table, className 
             {showTable && table ? (
                 <div className="overflow-x-auto">{table}</div>
             ) : (
-                <div className="h-64 w-full">{children}</div>
+                <div className={`${hauteur} w-full`}>{children}</div>
             )}
         </section>
     );

@@ -66,7 +66,7 @@ class AnalyzeSourceCommand extends Command
             foreach ($reader->rows(2000) as $r) {
                 $sample[] = $r;
             }
-            $detection = (new FamilyColumnDetector)->detect($header, $sample, $ref->familleCodes);
+            $detection = (new FamilyColumnDetector)->detect($header, $sample, $ref->familleCodes, $columns->familyColumnCandidates);
             $familleColonne = $detection->chosenIndex;
         }
         $columns->withFamilyColumn($familleColonne);
@@ -106,6 +106,8 @@ class AnalyzeSourceCommand extends Command
         $exclusions = [];
         $outliers = 0;
         $famillesInconnues = 0;
+        /** @var array<string, array<string, array<string, true>>> source => catégorie => clients */
+        $categoriesClients = [];
         $poidsOrigines = [];
         $lignesPoidsIndetermine = 0;
         $lignesPoidsConflit = 0;
@@ -117,6 +119,9 @@ class AnalyzeSourceCommand extends Command
         foreach ($reader->rows($limit) as $row) {
             $total++;
             $line = $normalizer->normalize($row);
+            if ($line->numeroClient !== '') {
+                $categoriesClients[$line->clientCategorySource][(string) $line->clientCategoryCode][$line->numeroClient] = true;
+            }
             $parScope[$line->scope->value]++;
             $commandes[$line->numeroCommande] = $line->scope->value;
 
@@ -259,6 +264,17 @@ class AnalyzeSourceCommand extends Command
                     $c['article'], $c['poids_valide_kg'], $c['poids_extrait_kg'],
                 ));
             }
+        }
+
+        $this->line('');
+        $this->info('=== Règle 2.7 — catégorie client (clients distincts, par source) ===');
+        $this->line('  Colonne « Famille statistique » client : '.($columns->clientFamilyColumn ?? 'absente (mots-clés du nom)'));
+        foreach ($categoriesClients as $source => $parCategorie) {
+            ksort($parCategorie);
+            $this->line(sprintf('  %-10s %s', $source, implode('  ', array_map(
+                fn ($code, $clients) => $code.'×'.count($clients),
+                array_keys($parCategorie), $parCategorie,
+            ))));
         }
 
         $this->line('');

@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import AideIndicateur from '@/Components/AideIndicateur';
 import Kpi from '@/Components/Kpi';
+import ConcentrationVilles from '@/Components/livraisons/ConcentrationVilles';
 import { DataTable } from '@/Components/dashboard/ChartCard';
 import { dateFr, nInt } from '@/Components/dashboard/format';
 import { Deferred, Head, router } from '@inertiajs/react';
@@ -74,7 +75,7 @@ export default function Livraisons({ metrics, commandes }) {
                     </p>
                 )}
 
-                
+                <ConcentrationVilles villes={metrics.concentration_villes} />
 
                 <Deferred
                     data="commandes"

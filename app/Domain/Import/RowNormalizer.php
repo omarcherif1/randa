@@ -55,11 +55,19 @@ final class RowNormalizer
         $numeroClient = $c->value($row, 'client_numero');
         $nomClient = $c->value($row, 'client_nom');
 
-        // --- Règle 2.7 : catégorie du client (livré à l'étranger si commande export) ---
+        // --- Règle 2.7 : catégorie du client ---
+        // Source fiable = « Famille statistique » client du fichier, si c'est un code
+        // catégorie connu ; un code inconnu est signalé et ignoré (jamais inventé).
+        $categorieFichier = $c->clientFamilyCode($row);
+        if ($categorieFichier !== null && ! isset($this->ref->categoryIdByCode[$categorieFichier])) {
+            $anomalies[] = 'categorie_client_inconnue:'.$categorieFichier;
+            $categorieFichier = null;
+        }
         $resolution = $this->clientClassifier->classify(
             $numeroClient,
             $nomClient,
             livreALEtranger: $scope === OrderScope::Export,
+            categorieFichier: $categorieFichier,
         );
         $clientEstGroupe = $this->ref->isGroupCategory($resolution->categoryCode);
 

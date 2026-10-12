@@ -23,6 +23,7 @@ Route::get('/', fn () => redirect()->route(Auth::check() ? 'dashboard' : 'login'
 // Tableau de bord principal (section 4.2). Accès page par page (règle 3.1).
 Route::middleware(['auth', 'page:dashboard'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/local', [DashboardController::class, 'local'])->name('dashboard.local');
     Route::get('/dashboard/export.csv', [DashboardExportController::class, 'commandesCsv'])->name('dashboard.export.csv');
     Route::get('/dashboard/rapport', [DashboardExportController::class, 'rapport'])->name('dashboard.rapport');
     Route::get('/dashboard/rapport-hebdomadaire', [DashboardExportController::class, 'rapportHebdomadaire'])->name('dashboard.rapport.hebdo');

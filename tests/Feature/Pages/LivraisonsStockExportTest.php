@@ -78,6 +78,17 @@ class LivraisonsStockExportTest extends TestCase
         $this->assertLessThan(Commande::count(), $m['total']);
     }
 
+    public function test_concentration_par_ville_couvre_toutes_les_commandes_locales(): void
+    {
+        $villes = (new DeliveryMetrics)->forUser($this->admin())['concentration_villes'];
+
+        $this->assertNotEmpty($villes);
+        $this->assertSame($villes, collect($villes)->sortByDesc('commandes')->values()->all(), 'triées par commandes');
+        $this->assertSame(Commande::local()->count(), array_sum(array_column($villes, 'commandes')));
+        $cles = array_map(fn ($v) => str_replace(' ', '', \App\Support\Text::normalize($v['ville'])), $villes);
+        $this->assertSame(count($cles), count(array_unique($cles)), 'variantes d\'écriture regroupées');
+    }
+
     public function test_livraisons_page_gardee_par_permission(): void
     {
         $u = User::factory()->create();

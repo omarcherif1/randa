@@ -16,6 +16,11 @@ const TON_COULEUR = {
     attention: 'text-amber-600 dark:text-amber-400',
     // vert-600, pas émeraude : trop proche de la teinte Tunisie Farine (voir app.css).
     ok: 'text-green-600 dark:text-green-400',
+    // Rouge explicitement demandé pour certaines tuiles — malgré la collision
+    // connue avec le rouge de société Randa (voir docs/DESIGN.md §1.2), qui a
+    // motivé le remplacement du rouge par du violet pour « critique » ailleurs.
+    // N'utiliser « rouge » qu'à la demande explicite, jamais par défaut.
+    rouge: 'text-red-600 dark:text-red-400',
 };
 
 export default function Kpi({ label, value, hint, tone = 'normal', alert = false, aide, className = '' }) {

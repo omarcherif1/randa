@@ -12,6 +12,14 @@ use RuntimeException;
  * Le fichier a des en-têtes en double ("Date commande" ×2, "Famille statistique"
  * ×6). On ne code jamais "3ᵉ colonne" en dur : la colonne famille est choisie par
  * FamilyColumnDetector (règle 2.6) et injectée ici via `withFamilyColumn()`.
+ *
+ * Depuis l'extraction F1790079066766, le fichier porte en plus « Client » suivi
+ * d'une « Famille statistique » CLIENT (code catégorie 100…199, règle 2.7). Elle
+ * est repérée par sa position (juste après « Client ») et retirée des candidates
+ * famille ARTICLE : ses codes 100…119 recouvrent ceux des familles produit.
+ *
+ * Les en-têtes dont les accents ont été remplacés par « � » à l'extraction
+ * (« Quantit� command�e ») sont reconnus : « � » vaut un caractère quelconque.
  */
 final class ColumnMap
 {
@@ -38,6 +46,11 @@ final class ColumnMap
 
     private const FAMILY_HEADER = 'famille statistique';
 
+    private const CLIENT_HEADER = 'client';
+
+    /** marqueur d'un caractère perdu (« � ») après normalisation */
+    private const PERDU = '?';
+
     /** @var array<string, int> */
     private array $index = [];
 
@@ -46,6 +59,9 @@ final class ColumnMap
 
     private ?int $familyColumn = null;
 
+    /** colonne « Famille statistique » client (règle 2.7), absente des anciens fichiers */
+    public readonly ?int $clientFamilyColumn;
+
     /** @param list<string> $header en-têtes UTF-8 */
     public function __construct(public readonly array $header)
     {
@@ -53,16 +69,25 @@ final class ColumnMap
 
         foreach (self::FIELDS as $logical => $accepted) {
             foreach ($normalized as $i => $label) {
-                if (in_array($label, $accepted, true)) {
+                if ($this->matches($label, $accepted)) {
                     $this->index[$logical] = $i; // première occurrence
                     break;
                 }
             }
         }
 
+        $clientFamily = null;
+        foreach ($normalized as $i => $label) {
+            if ($this->matches($label, [self::CLIENT_HEADER])
+                && $this->matches($normalized[$i + 1] ?? '', [self::FAMILY_HEADER])) {
+                $clientFamily = $i + 1;
+            }
+        }
+        $this->clientFamilyColumn = $clientFamily;
+
         $fam = [];
         foreach ($normalized as $i => $label) {
-            if ($label === self::FAMILY_HEADER) {
+            if ($i !== $clientFamily && $this->matches($label, [self::FAMILY_HEADER])) {
                 $fam[] = $i;
             }
         }
@@ -115,10 +140,38 @@ final class ColumnMap
         return $v === '' ? null : $v;
     }
 
+    /** @param list<string> $row code catégorie client tel que dans le fichier, ou null */
+    public function clientFamilyCode(array $row): ?string
+    {
+        if ($this->clientFamilyColumn === null) {
+            return null;
+        }
+        $v = trim($row[$this->clientFamilyColumn] ?? '');
+
+        return $v === '' ? null : $v;
+    }
+
+    /** @param list<string> $accepted libellés normalisés */
+    private function matches(string $label, array $accepted): bool
+    {
+        if (! str_contains($label, self::PERDU)) {
+            return in_array($label, $accepted, true);
+        }
+        $pattern = '/^'.str_replace(preg_quote(self::PERDU, '/'), '.', preg_quote($label, '/')).'$/';
+        foreach ($accepted as $a) {
+            if (preg_match($pattern, $a) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private function normalize(string $label): string
     {
+        $label = str_replace(CsvReader::REMPLACEMENT, self::PERDU, $label);
         $label = Text::stripAccents($label);
-        $label = preg_replace('/[^a-z0-9]+/', ' ', $label) ?? '';
+        $label = preg_replace('/[^a-z0-9?]+/', ' ', $label) ?? '';
 
         return trim(preg_replace('/\s+/', ' ', $label) ?? '');
     }

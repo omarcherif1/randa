@@ -8,6 +8,7 @@ use App\Domain\Reporting\MetricsCache;
 use App\Domain\Scope\OrderScope;
 use App\Models\Commande;
 use App\Models\User;
+use App\Support\Text;
 
 /**
  * Page Livraisons (section 4.3) — commandes LOCALES avec leur état réel de cycle
@@ -41,8 +42,30 @@ final class DeliveryMetrics
                 }
             });
 
+            // Concentration géographique : commandes et tonnes livrées par ville de COMMANDE.
+            // Les variantes d'écriture d'une même ville (casse, espaces, accents :
+            // « BEN AROUS » / « BENAROUS ») sont regroupées sous l'orthographe la
+            // plus fréquente. Une délégation (« Beja Nord ») reste distincte de son
+            // gouvernorat (« BEJA ») : la source mélange les deux niveaux.
+            $parVille = (clone $base)
+                ->selectRaw("COALESCE(NULLIF(TRIM(ville_commande), ''), 'Non renseignée') as ville")
+                ->selectRaw('COUNT(*) as commandes, SUM(qte_livree_kg) as kg')
+                ->groupBy('ville')
+                ->orderByDesc('commandes')
+                ->get()
+                ->groupBy(fn ($r) => str_replace(' ', '', Text::normalize($r->ville)))
+                ->map(fn ($variantes) => [
+                    'ville' => $variantes->first()->ville,
+                    'commandes' => (int) $variantes->sum('commandes'),
+                    'tonnes' => round((float) $variantes->sum('kg') / 1000, 1),
+                ])
+                ->sortByDesc('commandes')
+                ->values()
+                ->all();
+
             return [
                 'fraicheur' => MetricsCache::fraicheur(),
+                'concentration_villes' => $parVille,
                 'total' => (clone $base)->count(),
                 'par_etat' => collect(OrderLifecycle::etatsOrdonnes())
                     ->mapWithKeys(fn ($e) => [$e => (int) ($parEtat[$e] ?? 0)])->all(),

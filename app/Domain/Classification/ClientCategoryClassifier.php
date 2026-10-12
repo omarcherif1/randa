@@ -12,7 +12,9 @@ use App\Support\Text;
  * ses commandes.
  *
  * Ordre de priorité :
- *   1. source fiable numéro client => catégorie (si disponible) ;
+ *   1. source fiable numéro client => catégorie : la « Famille statistique »
+ *      client portée par la ligne du fichier (code déjà vérifié par l'appelant),
+ *      sinon la table de référence injectée ;
  *   2. déduction objective (client livré à l'étranger => Exportation) ;
  *   3. reconnaissance par mots-clés dans le nom du client ;
  *   4. sinon "Indéfini" (jamais masqué).
@@ -33,11 +35,22 @@ final class ClientCategoryClassifier
         private readonly string $fallbackCategoryCode,
     ) {}
 
-    public function classify(string $numeroClient, ?string $nomClient, bool $livreALEtranger = false): ClientCategoryResolution
-    {
+    public function classify(
+        string $numeroClient,
+        ?string $nomClient,
+        bool $livreALEtranger = false,
+        ?string $categorieFichier = null,
+    ): ClientCategoryResolution {
         $numero = trim($numeroClient);
 
-        // 1. Source fiable
+        // 1. Source fiable : famille statistique client du fichier, puis table de référence
+        if ($categorieFichier !== null && $categorieFichier !== '') {
+            return new ClientCategoryResolution(
+                $categorieFichier,
+                ClientCategoryResolution::SOURCE_REFERENCE,
+                ClientCategoryResolution::DETAIL_FICHIER,
+            );
+        }
         if ($numero !== '' && isset($this->referenceMap[$numero])) {
             return new ClientCategoryResolution(
                 $this->referenceMap[$numero],

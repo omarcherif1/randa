@@ -59,7 +59,7 @@ final class UnifiedFileImporter
             foreach ($reader->rows(3000) as $r) {
                 $sample[] = $r;
             }
-            $detection = (new FamilyColumnDetector)->detect($header, $sample, $ref->familleCodes);
+            $detection = (new FamilyColumnDetector)->detect($header, $sample, $ref->familleCodes, $columns->familyColumnCandidates);
             $familleColonne = $detection->chosenIndex;
             $candidates = $detection->candidates;
         }
@@ -94,6 +94,13 @@ final class UnifiedFileImporter
                 continue;
             }
             $grouped[$line->numeroCommande][] = $line;
+        }
+
+        $nonRepares = $reader->reparation?->nonRepares() ?? [];
+        if ($nonRepares !== []) {
+            arsort($nonRepares);
+            $result->warnings[] = 'Accents non réparés (à ajouter dans config/lexique_accents.php) : '
+                .implode(', ', array_map(fn ($mot, $n) => "« {$mot} » ×{$n}", array_keys($nonRepares), $nonRepares)).'.';
         }
 
         // === Consolidation famille (règle 2.6, fin d'import) ===
@@ -565,6 +572,17 @@ final class UnifiedFileImporter
                         ],
                         $l->article,
                     );
+                }
+                foreach ($l->anomalies as $a) {
+                    if (str_starts_with($a, 'categorie_client_inconnue:')) {
+                        $code = substr($a, strlen('categorie_client_inconnue:'));
+                        $recorder->add(
+                            'categorie_client_inconnue', 'warning',
+                            "Catégorie client « {$code} » inconnue pour le client {$l->numeroClient} (« {$l->nomClient} »)",
+                            "categorie_client_inconnue:{$l->numeroClient}:{$code}",
+                            ['client' => $l->numeroClient, 'nom' => $l->nomClient, 'code' => $code],
+                        );
+                    }
                 }
                 if ($l->familleInconnue()) {
                     $recorder->add(

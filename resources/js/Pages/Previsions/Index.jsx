@@ -1,6 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import AideIndicateur from '@/Components/AideIndicateur';
-import Kpi from '@/Components/Kpi';
 import SecondaryButton from '@/Components/SecondaryButton';
 import ChartCard, { DataTable } from '@/Components/dashboard/ChartCard';
 import { dateHeureFr, moisFr, n1, nInt, pct, tonnes } from '@/Components/dashboard/format';
@@ -155,28 +154,6 @@ export default function Previsions({ metrics, options, filtres }) {
                         </span>
                     </div>
                 </div>
-
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-                    <Kpi
-                        label={`Prévu jusqu'à ${moisFr(metrics.mois_fin_horizon)}`}
-                        value={tonnes(metrics.total_prevu_annee_kg / 1000)}
-                        hint="tous produits, mois par mois"
-                    />
-                    <Kpi label="Fiabilité haute (historique)" value={nInt(metrics.repartition_fiabilite.haute)} />
-                    <Kpi label="Fiabilité moyenne" value={nInt(metrics.repartition_fiabilite.moyenne)} />
-                    <Kpi label="Fiabilité faible" value={nInt(metrics.repartition_fiabilite.faible)} tone="attention" />
-                    <Kpi
-                        label="Erreur moyenne backtest"
-                        value={
-                            metrics.backtest_global.mape_moyen != null
-                                ? pct(metrics.backtest_global.mape_moyen)
-                                : '—'
-                        }
-                        hint={`${nInt(metrics.backtest_global.produits_testes)} produits testés`}
-                    />
-                </div>
-
-                
 
                 {/* Total prévu, tous produits, mois par mois jusqu'à décembre */}
                 {metrics.total_prevu_par_mois.length > 0 && (

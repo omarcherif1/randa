@@ -12,8 +12,8 @@ use Inertia\Response;
 
 /**
  * Tableau de bord principal (section 4.2) — EXCLUSIVEMENT local (règle 2.2).
- * Les KPI arrivent d'emblée ; la table interactive se charge en différé
- * (rechargement partiel Inertia) — exigence 7 (KPI avant le reste).
+ * Scindé en deux pages : « Dashboard » (chiffres clés) et « Local »
+ * (graphiques, classements, table interactive des commandes).
  */
 class DashboardController extends Controller
 {
@@ -23,6 +23,18 @@ class DashboardController extends Controller
         $filter = DashboardFilter::fromRequest($request, $user);
 
         return Inertia::render('Dashboard', [
+            'metrics' => (new DashboardMetrics)->forFilter($filter),
+            'options' => (new FilterOptions)->forUser($user),
+            'filtres' => $filter->toArray(),
+        ]);
+    }
+
+    public function local(Request $request): Response
+    {
+        $user = $request->user();
+        $filter = DashboardFilter::fromRequest($request, $user);
+
+        return Inertia::render('Dashboard/Local', [
             'metrics' => (new DashboardMetrics)->forFilter($filter),
             'options' => (new FilterOptions)->forUser($user),
             'filtres' => $filter->toArray(),

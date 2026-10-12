@@ -12,6 +12,8 @@ final class ClientCategoryResolution
 
     public const SOURCE_UNDEFINED = 'undefined';   // catégorie "Indéfini"
 
+    public const DETAIL_FICHIER = 'Famille statistique client du fichier';
+
     public function __construct(
         public readonly ?string $categoryCode,
         public readonly string $source,

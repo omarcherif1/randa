@@ -30,16 +30,20 @@ final class FamilyColumnDetector
      * @param  list<string>  $header  en-têtes du fichier (déjà en UTF-8)
      * @param  iterable<array<int,string>>  $rows  échantillon de lignes de données
      * @param  list<string>  $codesReference  codes des 32 familles officielles
+     * @param  list<int>|null  $candidateIdx  candidates déjà repérées (ColumnMap::familyColumnCandidates,
+     *                                         qui écarte la famille CLIENT) ; sinon déduites de l'en-tête
      */
-    public function detect(array $header, iterable $rows, array $codesReference): FamilyColumnResult
+    public function detect(array $header, iterable $rows, array $codesReference, ?array $candidateIdx = null): FamilyColumnResult
     {
         $refset = array_fill_keys(array_map('strval', $codesReference), true);
 
         // Colonnes candidates : en-tête intitulé "Famille statistique".
-        $candidateIdx = [];
-        foreach ($header as $i => $label) {
-            if ($this->normalizeLabel($label) === self::HEADER_LABEL) {
-                $candidateIdx[] = $i;
+        if ($candidateIdx === null) {
+            $candidateIdx = [];
+            foreach ($header as $i => $label) {
+                if ($this->normalizeLabel($label) === self::HEADER_LABEL) {
+                    $candidateIdx[] = $i;
+                }
             }
         }
 

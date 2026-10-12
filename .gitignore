@@ -28,3 +28,6 @@ Thumbs.db
 /storage/app/imports
 /storage/app/backups
 !tests/Fixtures/*.csv
+
+# Données source de l'entreprise (CSV, cahier des charges, zips stock) — jamais versionnées
+/eya/

@@ -53,6 +53,13 @@ final class UnifiedFileValidator
             $warnings[] = 'Aucune colonne « Famille statistique » : toutes les lignes seront en famille inconnue.';
         }
 
+        if ($columns->clientFamilyColumn === null) {
+            $warnings[] = 'Pas de colonne « Famille statistique » client : catégories déduites des mots-clés du nom (règle 2.7).';
+        }
+        if ($reader->accentsPerdus) {
+            $warnings[] = 'Accents perdus à l\'extraction (caractères « � ») : réparés d\'après le lexique config/lexique_accents.php, les calculs ne sont pas affectés.';
+        }
+
         $premiereLigne = null;
         foreach ($reader->rows(1) as $r) {
             $premiereLigne = $r;

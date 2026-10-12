@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 /* Icônes (inline, pas de dépendance) --------------------------------------- */
 const I = {
     dashboard: 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z',
+    local: 'M4 6h16M4 12h10M4 18h13',
     livraisons:
         'M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zm11 0a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM3 4h11v9H3V4zm12 3h3.5L21 10v3h-6V7z',
     stock: 'M4 4h16v4H4V4zm0 6h16v10H4V10zm4 3h8v2H8v-2z',
@@ -34,6 +35,7 @@ function Icone({ nom, className = 'h-5 w-5' }) {
 /* Construction du menu selon les droits ----------------------------------- */
 const CATALOGUE = {
     dashboard: { label: 'Tableau de bord', route: 'dashboard', icone: 'dashboard' },
+    local: { label: 'Détails commandes', route: 'dashboard.local', icone: 'local' },
     livraisons: { label: 'Livraisons', route: 'livraisons', icone: 'livraisons' },
     stock: { label: 'Stock', route: 'stock', icone: 'stock' },
     previsions: { label: 'Prévisions', route: 'previsions', icone: 'previsions' },
@@ -41,15 +43,24 @@ const CATALOGUE = {
 };
 
 function construireGroupes({ pages, isAdmin, notifCount }) {
-    const dispo = (cle) =>
-        pages.includes(cle) && CATALOGUE[cle] && route().has(CATALOGUE[cle].route)
+    // `permission` permet de gater une entrée du catalogue sur un droit
+    // différent de sa propre clé (ex. « local » hérite du droit « dashboard »,
+    // dont ce n'est qu'une seconde page de détail, pas un droit séparé).
+    const dispo = (cle, permission = cle) =>
+        pages.includes(permission) && CATALOGUE[cle] && route().has(CATALOGUE[cle].route)
             ? [CATALOGUE[cle]]
             : [];
 
     const groupes = [
         {
             titre: 'Pilotage',
-            liens: [...dispo('dashboard'), ...dispo('livraisons'), ...dispo('stock'), ...dispo('previsions')],
+            liens: [
+                ...dispo('dashboard'),
+                ...dispo('local', 'dashboard'),
+                ...dispo('livraisons'),
+                ...dispo('stock'),
+                ...dispo('previsions'),
+            ],
         },
         { titre: 'International', liens: [...dispo('export')] },
     ];
@@ -122,7 +133,7 @@ function BarreLaterale({ groupes, onNavigate }) {
     return (
         <div className="flex h-full flex-col bg-white dark:bg-gray-900">
             <Link href="/" className="flex items-center gap-2 border-b border-gray-200 px-5 py-4 dark:border-gray-800">
-                <ApplicationLogo className="h-8 w-auto" />
+                <ApplicationLogo className="h-14 w-auto" />
                 <span className="text-sm font-semibold leading-tight text-gray-800 dark:text-gray-100">
                     Pilotage
                     <span className="block text-xs font-normal text-gray-400 dark:text-gray-500">Groupe Randa</span>
